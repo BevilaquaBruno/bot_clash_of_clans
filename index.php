@@ -12,7 +12,7 @@ $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
 $dotenv->safeLoad();
 
 $discord = new Discord([
-    'token' => $_ENV['TOKEN'],
+    'token' => $_ENV['DISC_TOKEN'],
     'loadAllMembers' => true, // Enable this option
     'intents' => Intents::getDefaultIntents() | Intents::GUILD_MEMBERS // Enable the `GUILD_MEMBERS` intent
 ]);
@@ -20,9 +20,16 @@ $discord = new Discord([
 function makeRequest(String $url){
     // Guzzlle CLient
     $GuzzleClient = new GuzzleHttp\Client();
-    $res = $GuzzleClient->request('GET', 'https://jsonplaceholder.typicode.com/todos/1');
+    try {
+        $res = $GuzzleClient->request('GET', $_ENV['BASE_URL'] . $url, [
+            'headers' => ['Authorization' => 'Bearer ' . $_ENV['COC_API_TOKEN']
+            ]
+        ]);
+        return json_decode($res->getBody());
+    } catch (\GuzzleHttp\Exception\GuzzleException $e) {
+        return($e->getMessage());
+    }
 
-    return json_decode($res->getBody());
 }
 
 $discord->on('ready', function(Discord $discord) {
@@ -34,7 +41,9 @@ $discord->on('ready', function(Discord $discord) {
       if($message_content[0] !== $_ENV['PREFIX']) return false;
       array_shift($message_content); // remove o comando do array
 
-      $message->channel->sendMessage(makeRequest('a')->title);
+      $response = makeRequest('clans/%'.$_ENV['CLAN_TAG'].'/members');
+      print_r($response);
+      $message->channel->sendMessage(json_encode($response));
   });
 
 });
